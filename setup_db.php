@@ -6,11 +6,11 @@ error_reporting(E_ALL);
 include 'config.php';
 
 try {
-    // Purani conflict peda krne wali tables ko clean drop krna
+    // Drop tables in correct order to avoid foreign key conflicts
     $conn->exec("DROP TABLE IF EXISTS orders");
-    echo "<p>🗑️ Old orders conflict cache dropped successfully.</p>";
+    echo "<p>✅ Orders table removed.</p>";
 
-    // 1. CREATE USERS TABLE
+    // Create users table for authentication and profile management
     $users_table = "CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL,
@@ -21,9 +21,9 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )";
     $conn->exec($users_table);
-    echo "<p>✅ Users table structural matrix initialized.</p>";
+    echo "<p>✅ Users table created successfully.</p>";
 
-    // 2. CREATE GIGS TABLE
+    // Create gigs table for service listings
     $gigs_table = "CREATE TABLE IF NOT EXISTS gigs (
         gig_id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -36,9 +36,9 @@ try {
         FOREIGN KEY(user_id) REFERENCES users(user_id)
     )";
     $conn->exec($gigs_table);
-    echo "<p>✅ Gigs service listings table structured.</p>";
+    echo "<p>✅ Gigs table created successfully.</p>";
 
-    // 3. CREATE ORDERS TABLE (Freshly mapped with seller_id)
+    // Create orders table to track transactions between buyers and sellers
     $orders_table = "CREATE TABLE orders (
         order_id INTEGER PRIMARY KEY AUTOINCREMENT,
         gig_id INTEGER,
@@ -53,10 +53,11 @@ try {
     )";
     $conn->exec($orders_table);
     
-    echo "<h3 style='color: #A78BC5; margin-top: 20px;'>✨ VelvetDesk Database Architecture Status:</h3>";
-    echo "<p style='color: green; font-weight: bold;'>Zabardast! All tables recreated with 'seller_id' mapping path.</p>";
+    echo "<h3 style='color: #A78BC5; margin-top: 20px;'>✨ VelvetDesk Database Status:</h3>";
+    echo "<p style='color: green; font-weight: bold;'>Database tables created successfully with proper relationships.</p>";
 
 } catch (PDOException $e) {
-    die("<p style='color: red; font-weight: bold;'>Database Schema Execution Failed: " . htmlspecialchars($e->getMessage()) . "</p>");
+    error_log("Database setup error: " . $e->getMessage());
+    die("<p style='color: red; font-weight: bold;'>Database setup failed. Please check server logs.</p>");
 }
 ?>

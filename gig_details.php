@@ -1,16 +1,15 @@
 <?php
 include 'config.php';
 
-// Check karenge ke URL mein Gig ID maujood hai ya nahi
+// Verify gig ID is provided in URL
 if (!isset($_GET['id'])) {
     header("Location: index.php");
     exit();
 }
 
 $gig_id = intval($_GET['id']);
-$message = "";
 
-// ==== LOGIC 1: FETCH SINGLE GIG DETAILS ====
+// Fetch single gig details from database
 try {
     $sql = "SELECT gigs.*, users.username, users.email FROM gigs 
             JOIN users ON gigs.user_id = users.user_id 
@@ -21,44 +20,15 @@ try {
     $gig = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$gig) {
-        die("Service nahi mili!");
+        die("Service not found.");
     }
 } catch (PDOException $e) {
-    die("Error: " . $e->getMessage());
+    error_log("Gig details fetch error: " . $e->getMessage());
+    die("Error loading service details.");
 }
 
-// ==== LOGIC 2: MOCK PAYMENT & ORDER INTEGRATION ====
-if (isset($_POST['pay_now_btn'])) {
-    // Agar login nahi hai toh checkout block karo
-    if (!isset($_SESSION['user_id'])) {
-        header("Location: login.php");
-        exit();
-    }
-
-    $buyer_id = $_SESSION['user_id'];
-    $amount = $gig['price'];
-
-    // Secure checking: Seller khud apna gig buy na kare
-    if ($buyer_id == $gig['user_id']) {
-        $message = "<div class='alert alert-danger'>Aap apni hi service purchase nahi kar sakte!</div>";
-    } else {
-        try {
-            // SQL Query: Place order with 'Paid' status simulating a successful payment gateway response
-            $sql = "INSERT INTO orders (gig_id, buyer_id, amount, payment_status) VALUES (:gig_id, :buyer_id, :amount, 'Paid')";
-            $stmt = $conn->prepare($sql);
-            $stmt->bindParam(':gig_id', $gig_id);
-            $stmt->bindParam(':buyer_id', $buyer_id);
-            $stmt->bindParam(':amount', $amount);
-            $stmt->execute();
-
-            // Order complete hone par success screen par user dashboard update pass karo
-            header("Location: order_success.php");
-            exit();
-        } catch (PDOException $e) {
-            $message = "<div class='alert alert-danger'>Payment Processing Failed: " . $e->getMessage() . "</div>";
-        }
-    }
-}
+// Generate CSRF token for order form
+$csrf_token = generateCSRFToken();
 
 include 'header.php';
 ?>

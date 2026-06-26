@@ -1,10 +1,10 @@
 <?php
-// Active database connection config import
+// Import database configuration and page header
 include 'config.php';
 include 'header.php';
 
 try {
-    // Marketplace se saari services fetch krna metadata settings ke sath
+    // Fetch all gigs from database with seller information
     $sql = "SELECT gigs.*, users.username FROM gigs 
             JOIN users ON gigs.user_id = users.user_id 
             ORDER BY gigs.gig_id DESC";
@@ -12,7 +12,8 @@ try {
     $stmt->execute();
     $gigs_dataset = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    echo "<div class='alert alert-danger'>Marketplace Fetch Error: " . htmlspecialchars($e->getMessage()) . "</div>";
+    error_log("Marketplace fetch error: " . $e->getMessage());
+    echo "<div class='alert alert-danger'>Error loading services. Please try again later.</div>";
     $gigs_dataset = [];
 }
 ?>
@@ -33,7 +34,7 @@ try {
         <?php foreach ($gigs_dataset as $gig): ?>
             <div class="col">
                 <div class="card card-gig h-100">
-                    <!-- Image render box block -->
+                    <!-- Service image container -->
                     <div class="gig-img-container">
                         <img src="<?php echo htmlspecialchars($gig['image_path']); ?>" class="gig-img" alt="Service Preview">
                     </div>
@@ -55,17 +56,17 @@ try {
                         </div>
                     </div>
                     
-                    <!-- Dynamic Validation Button Controller Box -->
+                    <!-- Action button for ordering service -->
                     <div class="card-footer bg-transparent border-0 pt-0 pb-3">
                         <?php if (isset($_SESSION['user_id'])): ?>
                             <?php if ($_SESSION['user_id'] == $gig['user_id']): ?>
-                                <!-- Conflict Bypass rule setup: No self buying -->
+                                <!-- Prevent user from ordering their own listing -->
                                 <button class="btn btn-sm btn-secondary w-100 py-2 fw-semibold" disabled>Your Own Listing</button>
                             <?php else: ?>
-                                <!-- Silent routing initialization link -->
+                                <!-- Order button to place a new order -->
                                 <a href="orders.php?action=place_order&gig_id=<?php echo $gig['gig_id']; ?>" 
                                    class="btn btn-sm btn-outline-velvet w-100 py-2 fw-semibold" 
-                                   onclick="return confirm('Do you want to initialize a service engagement pipeline for this offering?');">
+                                   onclick="return confirm('Do you want to place an order for this service?');">
                                    Order Service
                                 </a>
                             <?php endif; ?>

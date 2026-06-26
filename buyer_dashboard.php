@@ -2,6 +2,7 @@
 include 'config.php';
 include 'header.php';
 
+// Check if user is authenticated and has buyer role
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'buyer') {
     header("Location: login.php");
     exit();
@@ -9,7 +10,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'buyer') {
 
 $current_user_id = $_SESSION['user_id'];
 
-// Get all orders placed by this buyer
+// Fetch all orders placed by the current buyer
 $sql = "SELECT orders.*, gigs.title, users.username AS seller_name FROM orders 
         JOIN gigs ON orders.gig_id = gigs.gig_id 
         JOIN users ON orders.seller_id = users.user_id 

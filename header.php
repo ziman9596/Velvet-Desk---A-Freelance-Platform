@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VelvetDesk - Premium Freelance Marketplace</title>
-    <!-- CSS frameworks inclusion for visual structure -->
+    <!-- Bootstrap CSS for responsive design and UI components -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #F2EEFF; min-height: 100vh; display: flex; flex-direction: column; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
-        /* Lilac Haze Corporate Palette Setup Rules */
+        /* Lilac color palette styling for brand consistency */
         .navbar { background-color: #A78BC5 !important; border-bottom: 3px solid #C8A2C8; }
         .navbar-brand { color: #FFFFFF !important; font-weight: 700; letter-spacing: -0.5px; }
         .nav-link { color: #F2EEFF !important; font-weight: 500; }
@@ -17,7 +17,7 @@
         
         .footer { background-color: #C8A2C8; color: #FFFFFF; margin-top: auto; padding: 20px 0; border-top: 2px solid #A78BC5; }
         
-        /* UI Components Styling Blocks */
+        /* Button and card component styling */
         .btn-velvet { background-color: #A78BC5; color: white; border: none; font-weight: 600; border-radius: 8px; transition: 0.3s; }
         .btn-velvet:hover { background-color: #C8A2C8; color: white; transform: translateY(-1px); }
         .btn-outline-velvet { border: 2px solid #A78BC5; color: #A78BC5; font-weight: 600; border-radius: 8px; transition: 0.3s; }
@@ -33,7 +33,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark mb-4 shadow-sm">
     <div class="container">
-        <!-- Brand Identification Wordmark with Transparent Image Logo Integration -->
+        <!-- Brand logo and site name -->
         <a class="navbar-brand d-flex align-items-center fs-4" href="index.php">
             <img src="assets/image-removebg-preview.png" alt="VelvetDesk Logo" style="height: 35px; width: auto; margin-right: 12px; object-fit: contain;">
             VelvetDesk

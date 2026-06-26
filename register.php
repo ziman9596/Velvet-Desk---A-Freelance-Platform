@@ -1,39 +1,56 @@
 <?php
-include 'config.php'; // Database connection aur session start krna
-$message = ""; // Handling error aur success responses ka stack container
+include 'config.php';
+$message = "";
 
+// Process registration form with CSRF protection
 if (isset($_POST['register_btn'])) {
-    $username = trim($_POST['username']);
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
-    $role = $_POST['role'];
-
-    // Validation: Check empty inputs
-    if (empty($username) || empty($email) || empty($password) || empty($role)) {
-        $message = "<div class='alert alert-danger'>All registration fields are mandatory.</div>";
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
+        $message = "<div class='alert alert-danger'>Security validation failed. Please try again.</div>";
     } else {
-        // Secure password processing workflow
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        $username = trim($_POST['username']);
+        $email = trim($_POST['email']);
+        $password = $_POST['password'];
+        $confirm_password = $_POST['confirm_password'];
+        $role = $_POST['role'];
 
-        try {
-            // Prepared statement instantiation against SQL injection vectors
-            $sql = "INSERT INTO users (username, email, password, role) VALUES (:username, :email, :password, :role)";
-            $stmt = $conn->prepare($sql);
-            
-            $stmt->bindParam(':username', $username);
-            $stmt->bindParam(':email', $email);
-            $stmt->bindParam(':password', $hashed_password);
-            $stmt->bindParam(':role', $role);
-            
-            $stmt->execute();
-            
-            $message = "<div class='alert alert-success'>Account registered successfully! You can now <a href='login.php' class='fw-bold text-decoration-none'>Login here</a>.</div>";
-        } catch (PDOException $e) {
-            // Constraint check bypass routing rules
-            $message = "<div class='alert alert-danger'>Registration Failed: The provided email address is already registered.</div>";
+        // Input validation
+        if (empty($username) || empty($email) || empty($password) || empty($role)) {
+            $message = "<div class='alert alert-danger'>All registration fields are required.</div>";
+        } elseif (strlen($password) < 6) {
+            $message = "<div class='alert alert-danger'>Password must be at least 6 characters long.</div>";
+        } elseif ($password !== $confirm_password) {
+            $message = "<div class='alert alert-danger'>Passwords do not match.</div>";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $message = "<div class='alert alert-danger'>Invalid email address format.</div>";
+        } else {
+            // Hash password securely
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+            try {
+                // Insert new user with prepared statement to prevent SQL injection
+                $sql = "INSERT INTO users (username, email, password, role) VALUES (:username, :email, :password, :role)";
+                $stmt = $conn->prepare($sql);
+                
+                $stmt->bindParam(':username', $username);
+                $stmt->bindParam(':email', $email);
+                $stmt->bindParam(':password', $hashed_password);
+                $stmt->bindParam(':role', $role);
+                
+                $stmt->execute();
+                
+                $message = "<div class='alert alert-success'>Account registered successfully! You can now <a href='login.php' class='fw-bold text-decoration-none'>Login here</a>.</div>";
+            } catch (PDOException $e) {
+                // Check if it's a duplicate email error
+                error_log("Registration error: " . $e->getMessage());
+                $message = "<div class='alert alert-danger'>Registration failed. This email may already be registered.</div>";
+            }
         }
     }
 }
+
+// Generate CSRF token for the form
+$csrf_token = generateCSRFToken();
 ?>
 
 <!DOCTYPE html>
@@ -64,6 +81,7 @@ if (isset($_POST['register_btn'])) {
     <?php echo $message; ?>
 
     <form action="register.php" method="POST">
+        <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
         <div class="mb-3">
             <label class="form-label fw-semibold text-secondary">Username</label>
             <input type="text" name="username" class="form-control" placeholder="e.g., imanzainab" required>
@@ -74,7 +92,11 @@ if (isset($_POST['register_btn'])) {
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold text-secondary">Password</label>
-            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            <input type="password" name="password" class="form-control" placeholder="••••••••" required minlength="6">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary">Confirm Password</label>
+            <input type="password" name="confirm_password" class="form-control" placeholder="••••••••" required>
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold text-secondary">Account Type</label>

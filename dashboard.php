@@ -2,7 +2,7 @@
 include 'config.php';
 include 'header.php';
 
-// Authorization gateway routing
+// Check seller authorization
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'seller') {
     header("Location: login.php");
     exit();
@@ -11,54 +11,78 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'seller') {
 $current_user_id = $_SESSION['user_id'];
 $message = "";
 
-// Gig Publishing Processing Logic Engine
+// Handle gig publication request
 if (isset($_POST['publish_gig_btn'])) {
-    $title = trim($_POST['title']);
-    $description = trim($_POST['description']);
-    $price = floatval($_POST['price']);
-    $portfolio_link = trim($_POST['portfolio_link']);
-    
-    // File structure parameters configurations setup
-    $target_dir = "assets/uploads/";
-    if (!is_dir($target_dir)) { mkdir($target_dir, 0777, true); }
-    
-    $image_path = "assets/uploads/default-gig.png"; // Fallback static preview path
-    
-    if (isset($_FILES['gig_image']) && $_FILES['gig_image']['error'] == 0) {
-        $file_name = time() . "_" . basename($_FILES["gig_image"]["name"]);
-        $target_file = $target_dir . $file_name;
-        if (move_uploaded_file($_FILES["gig_image"]["tmp_name"], $target_file)) {
-            $image_path = $target_file;
-        }
-    }
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
+        $message = "<div class='alert alert-danger'>Security validation failed. Please try again.</div>";
+    } else {
+        $title = trim($_POST['title']);
+        $description = trim($_POST['description']);
+        $price = floatval($_POST['price']);
+        $portfolio_link = trim($_POST['portfolio_link']);
+        
+        // Validate inputs
+        if (empty($title) || empty($description) || $price <= 0) {
+            $message = "<div class='alert alert-danger'>Please fill in all required fields with valid values.</div>";
+        } else {
+            // Setup directory for uploads with secure permissions
+            $target_dir = "assets/uploads/";
+            if (!is_dir($target_dir)) { 
+                mkdir($target_dir, 0755, true); 
+            }
+            
+            $image_path = "assets/uploads/default-gig.png"; // Default fallback image
+            
+            // Handle image upload if provided
+            if (isset($_FILES['gig_image']) && $_FILES['gig_image']['error'] == 0) {
+                // Validate image file type
+                $allowed_image_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $file_mime = mime_content_type($_FILES['gig_image']['tmp_name']);
+                
+                if (in_array($file_mime, $allowed_image_types)) {
+                    $file_extension = pathinfo($_FILES["gig_image"]["name"], PATHINFO_EXTENSION);
+                    $file_name = time() . "_" . md5(uniqid()) . "." . preg_replace('/[^a-zA-Z0-9]/', '', $file_extension);
+                    $target_file = $target_dir . $file_name;
+                    
+                    if (move_uploaded_file($_FILES["gig_image"]["tmp_name"], $target_file)) {
+                        chmod($target_file, 0644);
+                        $image_path = $target_file;
+                    }
+                }
+            }
 
-    try {
-        $insert_sql = "INSERT INTO gigs (user_id, title, description, price, image_path, portfolio_link) 
-                       VALUES (:user_id, :title, :description, :price, :image_path, :portfolio_link)";
-        $stmt = $conn->prepare($insert_sql);
-        $stmt->bindParam(':user_id', $current_user_id);
-        $stmt->bindParam(':title', $title);
-        $stmt->bindParam(':description', $description);
-        $stmt->bindParam(':price', $price);
-        $stmt->bindParam(':image_path', $image_path);
-        $stmt->bindParam(':portfolio_link', $portfolio_link);
-        $stmt->execute();
-        $message = "<div class='alert alert-success'>Service setup mapped successfully to your index portfolio template.</div>";
-    } catch (PDOException $e) {
-        $message = "<div class='alert alert-danger'>Data Save Failure: " . htmlspecialchars($e->getMessage()) . "</div>";
+            try {
+                // Insert gig into database
+                $insert_sql = "INSERT INTO gigs (user_id, title, description, price, image_path, portfolio_link) 
+                               VALUES (:user_id, :title, :description, :price, :image_path, :portfolio_link)";
+                $stmt = $conn->prepare($insert_sql);
+                $stmt->bindParam(':user_id', $current_user_id);
+                $stmt->bindParam(':title', $title);
+                $stmt->bindParam(':description', $description);
+                $stmt->bindParam(':price', $price);
+                $stmt->bindParam(':image_path', $image_path);
+                $stmt->bindParam(':portfolio_link', $portfolio_link);
+                $stmt->execute();
+                $message = "<div class='alert alert-success'>Service published successfully!</div>";
+            } catch (PDOException $e) {
+                error_log("Gig publication error: " . $e->getMessage());
+                $message = "<div class='alert alert-danger'>Failed to publish service. Please try again.</div>";
+            }
+        }
     }
 }
 
-// Data Load Sequence: Extraction arrays for both Gigs and Incoming Orders
+// Fetch seller's gigs and incoming orders
 try {
-    // 1. Seller active gigs list pulling sequence
+    // Get all gigs published by this seller
     $gigs_sql = "SELECT * FROM gigs WHERE user_id = :user_id ORDER BY gig_id DESC";
     $gigs_stmt = $conn->prepare($gigs_sql);
     $gigs_stmt->bindParam(':user_id', $current_user_id);
     $gigs_stmt->execute();
     $my_gigs = $gigs_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. Incoming custom requests database validation pipeline queries
+    // Get all incoming orders for this seller
     $orders_sql = "SELECT orders.*, gigs.title, users.username AS buyer_name FROM orders 
                    JOIN gigs ON orders.gig_id = gigs.gig_id 
                    JOIN users ON orders.buyer_id = users.user_id 
@@ -68,10 +92,14 @@ try {
     $orders_stmt->execute();
     $received_orders = $orders_stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    echo "<div class='alert alert-danger'>Pipeline Sync Failure: " . htmlspecialchars($e->getMessage()) . "</div>";
+    error_log("Dashboard data fetch error: " . $e->getMessage());
+    echo "<div class='alert alert-danger'>Error loading dashboard data. Please try again.</div>";
     $my_gigs = [];
     $received_orders = [];
 }
+
+// Generate CSRF token for forms
+$csrf_token = generateCSRFToken();
 ?>
 
 <div class="row mt-3">
@@ -84,6 +112,7 @@ try {
             <p class="text-muted small">Input parameters to mount real-time structural offerings on the grid platform views.</p>
             <hr>
             <form action="dashboard.php" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <div class="mb-3">
                     <label class="form-label small fw-semibold text-secondary">Service Campaign Title</label>
                     <input type="text" name="title" class="form-control" placeholder="e.g., UI Web Branding Development" required>

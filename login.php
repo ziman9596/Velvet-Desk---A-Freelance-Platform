@@ -1,34 +1,48 @@
 <?php
-include 'config.php'; // Database configurations aur states verify krna
-$message = ""; // Notifications populate krne ke liye setup stack
+include 'config.php';
+$message = "";
 
+// Process login form submission with CSRF protection
 if (isset($_POST['login_btn'])) {
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || !validateCSRFToken($_POST['csrf_token'])) {
+        $message = "<div class='alert alert-danger'>Security validation failed. Please try again.</div>";
+    } else {
+        $email = trim($_POST['email']);
+        $password = $_POST['password'];
 
-    try {
-        // User record extraction block query
-        $sql = "SELECT * FROM users WHERE email = :email";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        // Encryption evaluation workflow sequence
-        if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
-            header("Location: index.php");
-            exit();
+        // Validate input
+        if (empty($email) || empty($password)) {
+            $message = "<div class='alert alert-danger'>Email and password are required.</div>";
         } else {
-            // Frontend clear corporate message
-            $message = "<div class='alert alert-danger'>Invalid account credentials. Please check your email and password.</div>";
+            try {
+                // Fetch user record from database
+                $sql = "SELECT * FROM users WHERE email = :email";
+                $stmt = $conn->prepare($sql);
+                $stmt->bindParam(':email', $email);
+                $stmt->execute();
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // Verify password hash
+                if ($user && password_verify($password, $user['password'])) {
+                    $_SESSION['user_id'] = $user['user_id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['role'] = $user['role'];
+                    header("Location: index.php");
+                    exit();
+                } else {
+                    $message = "<div class='alert alert-danger'>Invalid email or password.</div>";
+                }
+            } catch(PDOException $e) { 
+                error_log("Login error: " . $e->getMessage());
+                $message = "<div class='alert alert-danger'>An error occurred. Please try again later.</div>"; 
+            }
         }
-    } catch(PDOException $e) { 
-        $message = "<div class='alert alert-danger'>System Exception: " . htmlspecialchars($e->getMessage()) . "</div>"; 
     }
 }
+
+// Generate CSRF token for the form
+$csrf_token = generateCSRFToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -56,6 +70,7 @@ if (isset($_POST['login_btn'])) {
     <?php echo $message; ?>
     
     <form action="login.php" method="POST">
+        <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
         <div class="mb-3">
             <label class="form-label fw-semibold text-secondary">Email Address</label>
             <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
