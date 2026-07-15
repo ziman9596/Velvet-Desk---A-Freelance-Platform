@@ -104,57 +104,54 @@ $csrf_token = generateCSRFToken();
 
 <div class="row mt-3">
     <div class="col-12"><?php echo $message; ?></div>
-    
-    <!-- LEFT PANEL CONSOLE: Setup New Gig Listings form infrastructure -->
+
     <div class="col-lg-4 mb-4">
         <div class="card p-4 border-0 shadow-sm rounded-4 bg-white">
-            <h4 class="fw-bold mb-1" style="color: #A78BC5;">⚙️ Launch Service Parameters</h4>
-            <p class="text-muted small">Input parameters to mount real-time structural offerings on the grid platform views.</p>
+            <h4 class="fw-bold mb-1" style="color: #7d5f2f;">Create New Gig</h4>
+            <p class="text-muted small">Publish a new service for buyers to discover and order.</p>
             <hr>
             <form action="dashboard.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">Service Campaign Title</label>
-                    <input type="text" name="title" class="form-control" placeholder="e.g., UI Web Branding Development" required>
+                    <label class="form-label small fw-semibold text-secondary">Gig Title</label>
+                    <input type="text" name="title" class="form-control" placeholder="e.g., Landing page design" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">Operational Scope Narrative (Description)</label>
-                    <textarea name="description" class="form-control" rows="4" placeholder="Detail specifications, stacks, technologies and project limitations..." required></textarea>
+                    <label class="form-label small fw-semibold text-secondary">Description</label>
+                    <textarea name="description" class="form-control" rows="4" placeholder="Describe your service, process, and deliverables" required></textarea>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">Project Unit Pricing (USD)</label>
+                    <label class="form-label small fw-semibold text-secondary">Price (USD)</label>
                     <input type="number" step="0.01" name="price" class="form-control" placeholder="50.00" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">External Project Blueprint URL (Behance / GitHub)</label>
-                    <input type="url" name="portfolio_link" class="form-control" placeholder="https://behance.net/design-spec">
+                    <label class="form-label small fw-semibold text-secondary">Portfolio Link (Optional)</label>
+                    <input type="url" name="portfolio_link" class="form-control" placeholder="https://yourportfolio.com">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">Visual Marketing Banner Card Image</label>
+                    <label class="form-label small fw-semibold text-secondary">Gig Image (Optional)</label>
                     <input type="file" name="gig_image" class="form-control" accept="image/*">
                 </div>
-                <button type="submit" name="publish_gig_btn" class="btn btn-velvet w-100 py-2.5 mt-2 shadow-sm">Deploy Structural Offering</button>
+                <button type="submit" name="publish_gig_btn" class="btn btn-velvet w-100 py-2.5 mt-2 shadow-sm">Publish Gig</button>
             </form>
         </div>
     </div>
 
-    <!-- RIGHT PANEL CONSOLE: Dynamic Lists Displays -->
     <div class="col-lg-8">
-        <!-- TOP ROW SUBSECTION: Core Services Directory Published -->
         <div class="card p-4 border-0 shadow-sm rounded-4 bg-white mb-4">
-            <h4 class="fw-bold mb-1" style="color: #A78BC5;">📂 Your Live Service Catalogs</h4>
-            <p class="text-muted small">Overview analytics of active records published under your profile index tracking node.</p>
+            <h4 class="fw-bold mb-1" style="color: #7d5f2f;">Your Gigs</h4>
+            <p class="text-muted small">All services you have published.</p>
             <hr>
             <?php if (empty($my_gigs)): ?>
-                <p class="text-center text-muted py-4 small">No tracking points initialized on the public server cluster matrix yet.</p>
+                <p class="text-center text-muted py-4 small">No gigs published yet.</p>
             <?php else: ?>
                 <div class="table-responsive">
                     <table class="table align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>Catalog Preview</th>
-                                <th>Specification Info</th>
-                                <th>Flat Rate</th>
+                                <th>Preview</th>
+                                <th>Gig</th>
+                                <th>Price</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -165,7 +162,7 @@ $csrf_token = generateCSRFToken();
                                     </td>
                                     <td>
                                         <div class="fw-bold text-dark small"><?php echo htmlspecialchars($g['title']); ?></div>
-                                        <span class="text-muted" style="font-size: 11px;">ID Parameter: #<?php echo $g['gig_id']; ?></span>
+                                        <span class="text-muted" style="font-size: 11px;">Gig ID #<?php echo $g['gig_id']; ?></span>
                                     </td>
                                     <td class="fw-bold text-secondary small">$<?php echo number_format($g['price'], 2); ?></td>
                                 </tr>
@@ -176,23 +173,22 @@ $csrf_token = generateCSRFToken();
             <?php endif; ?>
         </div>
 
-        <!-- BOTTOM ROW SUBSECTION: Orders Delivery and File Transfer Controller Platform -->
         <div class="card p-4 shadow-sm border-0 rounded-4 bg-white">
-            <h4 class="fw-bold mb-1" style="color: #A78BC5;">💼 Received Project Orders Pipeline</h4>
-            <p class="text-muted small">Monitor operational assignments allocated to your node and upload client deliverables archive links.</p>
+            <h4 class="fw-bold mb-1" style="color: #7d5f2f;">Incoming Orders</h4>
+            <p class="text-muted small">Upload delivery files when an order is in progress.</p>
             <hr>
             <?php if (empty($received_orders)): ?>
-                <p class="text-center text-muted py-4 small">No transactional tasks requested from consumer indexes yet.</p>
+                <p class="text-center text-muted py-4 small">No orders received yet.</p>
             <?php else: ?>
                 <div class="table-responsive">
                     <table class="table align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th>Order ID</th>
-                                <th>Target Service Specifications</th>
-                                <th>Client Profile</th>
-                                <th>Workflow Status</th>
-                                <th class="text-center">Action Framework Console</th>
+                                <th>Service</th>
+                                <th>Buyer</th>
+                                <th>Status</th>
+                                <th class="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -205,21 +201,20 @@ $csrf_token = generateCSRFToken();
                                         <?php if ($order['order_status'] === 'In Progress'): ?>
                                             <span class="badge bg-warning text-dark p-2">In Progress</span>
                                         <?php elseif ($order['order_status'] === 'Delivered'): ?>
-                                            <span class="badge bg-info text-white p-2">Delivered (Pending)</span>
+                                            <span class="badge bg-info text-white p-2">Delivered</span>
                                         <?php else: ?>
-                                            <span class="badge bg-success text-white p-2">Completed Securely</span>
+                                            <span class="badge bg-success text-white p-2">Completed</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
                                         <?php if ($order['order_status'] === 'In Progress'): ?>
-                                            <!-- Structural processing file upload payload wrapper form -->
                                             <form action="orders.php" method="POST" enctype="multipart/form-data" class="d-flex align-items-center justify-content-center gap-1">
                                                 <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
                                                 <input type="file" name="delivery_file" class="form-control form-control-sm" required style="width: 150px; font-size:11px;">
-                                                <button type="submit" name="upload_delivery_btn" class="btn btn-xs btn-velvet px-2 py-1 small" style="font-size:11px;">Submit</button>
+                                                <button type="submit" name="upload_delivery_btn" class="btn btn-xs btn-velvet px-2 py-1 small" style="font-size:11px;">Upload</button>
                                             </form>
                                         <?php else: ?>
-                                            <span class="text-muted small" style="font-size: 11px;">Pipeline Archived (Closed)</span>
+                                            <span class="text-muted small" style="font-size: 11px;">No action required</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>

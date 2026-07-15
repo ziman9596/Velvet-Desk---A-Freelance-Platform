@@ -10,10 +10,11 @@ if (isset($_POST['login_btn'])) {
     } else {
         $email = trim($_POST['email']);
         $password = $_POST['password'];
+        $selected_role = $_POST['role'] ?? '';
 
         // Validate input
-        if (empty($email) || empty($password)) {
-            $message = "<div class='alert alert-danger'>Email and password are required.</div>";
+        if (empty($email) || empty($password) || empty($selected_role)) {
+            $message = "<div class='alert alert-danger'>Email, password, and role are required.</div>";
         } else {
             try {
                 // Fetch user record from database
@@ -25,11 +26,19 @@ if (isset($_POST['login_btn'])) {
 
                 // Verify password hash
                 if ($user && password_verify($password, $user['password'])) {
+                    if ($user['role'] !== $selected_role) {
+                        $message = "<div class='alert alert-danger'>Selected role does not match this account.</div>";
+                    } else {
                     $_SESSION['user_id'] = $user['user_id'];
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['role'] = $user['role'];
-                    header("Location: index.php");
+                    if ($user['role'] === 'seller') {
+                        header("Location: dashboard.php");
+                    } else {
+                        header("Location: buyer_dashboard.php");
+                    }
                     exit();
+                    }
                 } else {
                     $message = "<div class='alert alert-danger'>Invalid email or password.</div>";
                 }
@@ -49,13 +58,14 @@ $csrf_token = generateCSRFToken();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VelvetDesk - Portal Authentication</title>
+    <title>VelvetDesk - Sign In</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #F2EEFF; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', sans-serif; }
-        .card { border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(167, 139, 197, 0.2); width: 100%; max-width: 420px; }
+        body { background: radial-gradient(circle at 15% 20%, #f6efe6, #f4ead8 35%, #efe2cb 70%); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Georgia', 'Times New Roman', serif; }
+        .card { border-radius: 18px; border: 1px solid #e3d7be; box-shadow: 0 14px 35px rgba(84, 63, 24, 0.12); width: 100%; max-width: 450px; }
         .btn-velvet { background-color: #A78BC5; color: white; border: none; font-weight:600; }
         .btn-velvet:hover { background-color: #C8A2C8; color:white; }
+        .form-control:focus, .form-select:focus { border-color: #A78BC5; box-shadow: 0 0 0 0.25rem rgba(167, 139, 197, 0.2); }
     </style>
 </head>
 <body>
@@ -63,8 +73,8 @@ $csrf_token = generateCSRFToken();
     <div class="text-center mb-4">
         <!-- Unified Image Logo Component -->
         <img src="assets/image-removebg-preview.png" alt="VelvetDesk Logo" style="height: 55px; width: auto; object-fit: contain;" class="mb-2">
-        <h2 class="fw-bold" style="color: #A78BC5; margin-top: 5px;">VelvetDesk</h2>
-        <p class="text-muted small">Sign in to your premium specialized ecosystem</p>
+        <h2 class="fw-bold" style="color: #7d5f2f; margin-top: 5px;">VelvetDesk</h2>
+        <p class="text-muted small">Choose your role and enter your account</p>
     </div>
     
     <?php echo $message; ?>
@@ -78,6 +88,14 @@ $csrf_token = generateCSRFToken();
         <div class="mb-3">
             <label class="form-label fw-semibold text-secondary">Secure Password</label>
             <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary">I am signing in as</label>
+            <select name="role" class="form-select" required>
+                <option value="" disabled selected>Select role</option>
+                <option value="buyer">Buyer</option>
+                <option value="seller">Freelancer</option>
+            </select>
         </div>
         <button type="submit" name="login_btn" class="btn btn-velvet w-100 py-2.5 rounded-3">Authenticate Account</button>
     </form>

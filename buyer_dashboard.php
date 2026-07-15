@@ -23,8 +23,8 @@ $my_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="card p-4 shadow-sm border-0 rounded-4 bg-white mt-3">
-    <h3 class="fw-bold mb-1" style="color: #A78BC5;">🛍️ Customer Procurement Panel</h3>
-    <p class="text-muted small">Track your active order pathways, access deliverables, and manage system confirmations.</p>
+    <h3 class="fw-bold mb-1" style="color: #7d5f2f;">Buyer Dashboard</h3>
+    <p class="text-muted small">Track active orders, download deliveries, and complete finished work.</p>
     <hr>
 
     <?php if (isset($_GET['success'])): ?>
@@ -32,17 +32,17 @@ $my_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php endif; ?>
 
     <?php if (empty($my_orders)): ?>
-        <p class="text-center text-muted py-4">You haven't placed any system orders yet. <a href="index.php">Browse services</a></p>
+        <p class="text-center text-muted py-4">You have not placed any orders yet. <a href="index.php#featured-gigs">Browse gigs</a></p>
     <?php else: ?>
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Order ID</th>
-                        <th>Purchased Service</th>
-                        <th>Assigned Seller</th>
-                        <th>Pipeline Status</th>
-                        <th class="text-center">Operations Console</th>
+                        <th>Service</th>
+                        <th>Freelancer</th>
+                        <th>Status</th>
+                        <th class="text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -55,7 +55,7 @@ $my_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php if ($order['order_status'] === 'In Progress'): ?>
                                     <span class="badge bg-warning text-dark px-2.5 py-1.5">In Progress</span>
                                 <?php elseif ($order['order_status'] === 'Delivered'): ?>
-                                    <span class="badge bg-info text-white px-2.5 py-1.5">Delivered (Pending)</span>
+                                    <span class="badge bg-info text-white px-2.5 py-1.5">Delivered</span>
                                 <?php else: ?>
                                     <span class="badge bg-success text-white px-2.5 py-1.5">Completed</span>
                                 <?php endif; ?>
