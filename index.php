@@ -2,24 +2,98 @@
 include 'config.php';
 include 'header.php';
 
-try {
-    $featured_sql = "SELECT gigs.*, users.username, users.platform_balance
-                     FROM gigs
-                     JOIN users ON gigs.user_id = users.user_id
-                     ORDER BY users.platform_balance DESC, gigs.gig_id DESC
-                     LIMIT 6";
-    $featured_stmt = $conn->prepare($featured_sql);
-    $featured_stmt->execute();
-    $featured_gigs = $featured_stmt->fetchAll(PDO::FETCH_ASSOC);
+$search_term = trim($_GET['search'] ?? '');
 
-    $freelancer_sql = "SELECT user_id, username, platform_balance
-                       FROM users
-                       WHERE role = 'seller'
-                       ORDER BY platform_balance DESC, user_id DESC
-                       LIMIT 6";
-    $freelancer_stmt = $conn->prepare($freelancer_sql);
-    $freelancer_stmt->execute();
-    $top_freelancers = $freelancer_stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $gigs_stmt = $conn->prepare("SELECT gigs.*, users.username
+                                 FROM gigs
+                                 JOIN users ON gigs.user_id = users.user_id
+                                 WHERE users.role = 'seller'");
+    $gigs_stmt->execute();
+    $all_gigs = $gigs_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $sellers_stmt = $conn->prepare("SELECT user_id, username
+                                    FROM users
+                                    WHERE role = 'seller'");
+    $sellers_stmt->execute();
+    $all_sellers = $sellers_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $completed_stmt = $conn->prepare("SELECT seller_id, COUNT(*) AS completed_projects
+                                      FROM orders
+                                      WHERE order_status = 'Completed'
+                                      GROUP BY seller_id");
+    $completed_stmt->execute();
+    $completed_map = [];
+    foreach ($completed_stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $completed_map[(int)$row['seller_id']] = (int)$row['completed_projects'];
+    }
+
+    $reviews_stmt = $conn->prepare("SELECT seller_id, AVG(rating) AS average_review, COUNT(*) AS review_count
+                                    FROM reviews
+                                    GROUP BY seller_id");
+    $reviews_stmt->execute();
+    $review_map = [];
+    foreach ($reviews_stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $review_map[(int)$row['seller_id']] = [
+            'average_review' => (float)$row['average_review'],
+            'review_count' => (int)$row['review_count'],
+        ];
+    }
+
+    $featured_gigs = [];
+    foreach ($all_gigs as $gig) {
+        $seller_id = (int)$gig['user_id'];
+        $completed_projects = $completed_map[$seller_id] ?? 0;
+        $average_review = $review_map[$seller_id]['average_review'] ?? 0;
+        $gig['completed_projects'] = $completed_projects;
+        $gig['average_review'] = $average_review;
+        $gig['freelancer_rating'] = calculateFreelancerRating($average_review, $completed_projects);
+
+        $gig_search_blob = $gig['title'] . ' ' . $gig['description'] . ' ' . $gig['username'] . ' ' . ($gig['category'] ?? '') . ' ' . ($gig['subcategory'] ?? '') . ' ' . ($gig['service_type'] ?? '') . ' ' . ($gig['gig_tags'] ?? '');
+        if ($search_term === '' || stripos($gig_search_blob, $search_term) !== false) {
+            $featured_gigs[] = $gig;
+        }
+    }
+
+    usort($featured_gigs, function ($left, $right) {
+        if ($left['freelancer_rating'] === $right['freelancer_rating']) {
+            if ($left['completed_projects'] === $right['completed_projects']) {
+                return $right['gig_id'] <=> $left['gig_id'];
+            }
+            return $right['completed_projects'] <=> $left['completed_projects'];
+        }
+        return $right['freelancer_rating'] <=> $left['freelancer_rating'];
+    });
+    $featured_gigs = array_slice($featured_gigs, 0, 6);
+
+    $top_freelancers = [];
+    foreach ($all_sellers as $seller) {
+        $seller_id = (int)$seller['user_id'];
+        $completed_projects = $completed_map[$seller_id] ?? 0;
+        $average_review = $review_map[$seller_id]['average_review'] ?? 0;
+        $rating = calculateFreelancerRating($average_review, $completed_projects);
+
+        if ($search_term === '' || stripos($seller['username'], $search_term) !== false) {
+            $top_freelancers[] = [
+                'user_id' => $seller_id,
+                'username' => $seller['username'],
+                'completed_projects' => $completed_projects,
+                'average_review' => $average_review,
+                'rating' => $rating,
+            ];
+        }
+    }
+
+    usort($top_freelancers, function ($left, $right) {
+        if ($left['rating'] === $right['rating']) {
+            if ($left['completed_projects'] === $right['completed_projects']) {
+                return $right['user_id'] <=> $left['user_id'];
+            }
+            return $right['completed_projects'] <=> $left['completed_projects'];
+        }
+        return $right['rating'] <=> $left['rating'];
+    });
+    $top_freelancers = array_slice($top_freelancers, 0, 6);
 
     $stats_sql = "SELECT
                     (SELECT COUNT(*) FROM users WHERE role = 'buyer') AS buyers_count,
@@ -29,16 +103,14 @@ try {
     $stats_stmt->execute();
     $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
 
-    $reviews_sql = "SELECT users.username, COUNT(orders.order_id) AS completed_jobs
-                    FROM orders
-                    JOIN users ON orders.seller_id = users.user_id
-                    WHERE orders.order_status = 'Completed'
-                    GROUP BY users.user_id
-                    ORDER BY completed_jobs DESC
-                    LIMIT 3";
-    $reviews_stmt = $conn->prepare($reviews_sql);
-    $reviews_stmt->execute();
-    $review_sources = $reviews_stmt->fetchAll(PDO::FETCH_ASSOC);
+    $buyer_reviews_stmt = $conn->prepare("SELECT reviews.review_text, reviews.rating, reviews.created_at, reviewer.username AS reviewer_name, seller.username AS seller_name, reviews.seller_id
+                                          FROM reviews
+                                          JOIN users AS reviewer ON reviews.reviewer_id = reviewer.user_id
+                                          JOIN users AS seller ON reviews.seller_id = seller.user_id
+                                          ORDER BY reviews.created_at DESC, reviews.review_id DESC
+                                          LIMIT 3");
+    $buyer_reviews_stmt->execute();
+    $review_sources = $buyer_reviews_stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log("Homepage fetch error: " . $e->getMessage());
     echo "<div class='alert alert-danger'>Error loading homepage data. Please try again later.</div>";
@@ -50,28 +122,20 @@ try {
 
 if (empty($review_sources)) {
     $review_sources = [
-        ['username' => 'CreativeSeller', 'completed_jobs' => 0],
-        ['username' => 'WebCraftStudio', 'completed_jobs' => 0],
-        ['username' => 'BrandPilot', 'completed_jobs' => 0],
+        ['reviewer_name' => 'Amina', 'seller_name' => 'CreativeSeller', 'rating' => 5, 'review_text' => 'Trusted collaborators make the whole marketplace feel reliable.'],
+        ['reviewer_name' => 'Noah', 'seller_name' => 'WebCraftStudio', 'rating' => 5, 'review_text' => 'Fast communication and precise delivery are the standard here.'],
+        ['reviewer_name' => 'Mia', 'seller_name' => 'BrandPilot', 'rating' => 4, 'review_text' => 'The conversation-first flow makes project scoping much clearer.'],
     ];
-}
-
-function balanceToRating($balance) {
-    $rating = 3.5 + ($balance / 2000);
-    if ($rating > 5) {
-        $rating = 5;
-    }
-    return number_format($rating, 1);
 }
 ?>
 
 <style>
     .hero-shell {
-        background: linear-gradient(120deg, #f8e8c8 0%, #f4dcc3 50%, #e9d2ae 100%);
+        background: linear-gradient(120deg, rgba(168, 149, 205, 0.26) 0%, rgba(111, 94, 147, 0.18) 50%, rgba(61, 47, 92, 0.12) 100%);
         border-radius: 22px;
-        border: 1px solid #e1c8a0;
+        border: 1px solid rgba(111, 94, 147, 0.24);
         padding: 42px 28px;
-        box-shadow: 0 12px 35px rgba(125, 95, 47, 0.14);
+        box-shadow: 0 12px 35px rgba(61, 47, 92, 0.14);
         margin-bottom: 34px;
         position: relative;
         overflow: hidden;
@@ -90,20 +154,20 @@ function balanceToRating($balance) {
 
     .metric-card {
         border-radius: 14px;
-        border: 1px solid #ead6b4;
-        background: #fff9ee;
+        border: 1px solid rgba(168, 149, 205, 0.28);
+        background: #ffffff;
         text-align: center;
         padding: 16px;
         height: 100%;
     }
 
     .section-title {
-        color: #65481f;
+        color: var(--jacarta);
         font-weight: 700;
     }
 
     .profile-card {
-        border: 1px solid #ead6b4;
+        border: 1px solid rgba(111, 94, 147, 0.18);
         border-radius: 14px;
         background: #fff;
         padding: 16px;
@@ -112,23 +176,23 @@ function balanceToRating($balance) {
 
     .review-card {
         border-radius: 16px;
-        border: 1px solid #e8d4b2;
-        background: linear-gradient(180deg, #fff9ed, #fff4df);
+        border: 1px solid rgba(168, 149, 205, 0.22);
+        background: linear-gradient(180deg, rgba(228, 224, 242, 0.78), rgba(255, 255, 255, 0.92));
         padding: 18px;
         height: 100%;
     }
 
     .about-wrap {
         border-radius: 18px;
-        background: #fffef9;
-        border: 1px solid #ecdab9;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(111, 94, 147, 0.18);
         padding: 26px;
     }
 
     .contact-strip {
         border-radius: 18px;
-        background: #7d5f2f;
-        color: #fff8eb;
+        background: linear-gradient(135deg, var(--jacarta), var(--dark-blue-gray));
+        color: #fff;
         padding: 26px;
     }
 </style>
@@ -136,8 +200,8 @@ function balanceToRating($balance) {
 <section class="hero-shell">
     <div class="row align-items-center">
         <div class="col-lg-7">
-            <h1 class="display-5 fw-bold mb-3" style="color: #5e441e;">Build Faster With Trusted Freelancers</h1>
-            <p class="lead" style="color: #6f5428;">A single marketplace for buyers and freelancers. Discover curated gigs, compare verified profiles, and start projects in minutes.</p>
+            <h1 class="display-5 fw-bold mb-3 text-jacarta">Build Faster With Trusted Freelancers</h1>
+            <p class="lead text-dark-blue-gray">A single marketplace for buyers and freelancers. Discover curated gigs, compare verified profiles, and start projects in minutes.</p>
             <div class="d-flex gap-2 flex-wrap mt-3">
                 <a href="#featured-gigs" class="btn btn-velvet px-4">Explore Gigs</a>
                 <?php if (isset($_SESSION['user_id'])): ?>
@@ -150,24 +214,34 @@ function balanceToRating($balance) {
                     <a href="login.php" class="btn btn-outline-velvet px-4">Login By Role</a>
                 <?php endif; ?>
             </div>
+            <div class="mt-4 p-3 rounded-4 bg-white border" style="max-width: 560px;">
+                <form action="index.php" method="GET" class="row g-2 align-items-center">
+                    <div class="col-12 col-md-8">
+                        <input type="search" name="search" value="<?php echo htmlspecialchars($search_term); ?>" class="form-control form-control-lg" placeholder="Search work or freelancers">
+                    </div>
+                    <div class="col-12 col-md-4 d-grid">
+                        <button type="submit" class="btn btn-velvet btn-lg">Search</button>
+                    </div>
+                </form>
+            </div>
         </div>
         <div class="col-lg-5 mt-4 mt-lg-0">
             <div class="row g-2">
                 <div class="col-4">
                     <div class="metric-card">
-                        <div class="fw-bold fs-4" style="color:#7d5f2f;"><?php echo (int)$stats['buyers_count']; ?></div>
+                        <div class="fw-bold fs-4 text-dark-blue-gray"><?php echo (int)$stats['buyers_count']; ?></div>
                         <small class="text-muted">Buyers</small>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="metric-card">
-                        <div class="fw-bold fs-4" style="color:#7d5f2f;"><?php echo (int)$stats['sellers_count']; ?></div>
+                        <div class="fw-bold fs-4 text-dark-blue-gray"><?php echo (int)$stats['sellers_count']; ?></div>
                         <small class="text-muted">Freelancers</small>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="metric-card">
-                        <div class="fw-bold fs-4" style="color:#7d5f2f;"><?php echo (int)$stats['completed_orders']; ?></div>
+                        <div class="fw-bold fs-4 text-dark-blue-gray"><?php echo (int)$stats['completed_orders']; ?></div>
                         <small class="text-muted">Completed</small>
                     </div>
                 </div>
@@ -176,10 +250,18 @@ function balanceToRating($balance) {
     </div>
 </section>
 
+<?php if ($search_term !== ''): ?>
+    <section class="mb-4">
+        <div class="alert alert-light border shadow-sm">
+            Showing results for <strong><?php echo htmlspecialchars($search_term); ?></strong>.
+        </div>
+    </section>
+<?php endif; ?>
+
 <section class="mb-5" id="featured-freelancers">
     <div class="d-flex justify-content-between align-items-end mb-3">
         <h2 class="section-title mb-0">Top Freelancers</h2>
-        <small class="text-muted">Ranked by platform balance</small>
+        <small class="text-muted">Ranked by reviews and completed projects</small>
     </div>
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
         <?php if (empty($top_freelancers)): ?>
@@ -194,13 +276,13 @@ function balanceToRating($balance) {
                             <h5 class="mb-0"><?php echo htmlspecialchars($freelancer['username']); ?></h5>
                             <span class="badge text-bg-light border">Seller</span>
                         </div>
-                        <div class="mt-2 text-muted small">Estimated rating</div>
-                        <div class="fw-semibold" style="color:#7d5f2f;">
-                            <?php echo balanceToRating((float)$freelancer['platform_balance']); ?>/5.0
-                            <span class="small text-muted">(balance-based)</span>
+                        <div class="mt-2 text-muted small">Customer rating</div>
+                        <div class="fw-semibold text-dark-blue-gray">
+                            <?php echo number_format((float)$freelancer['rating'], 1); ?>/5.0
+                            <span class="small text-muted">(reviews + projects)</span>
                         </div>
-                        <div class="mt-2 small text-muted">Platform balance</div>
-                        <div class="fw-bold" style="color:#65481f;">$<?php echo number_format((float)$freelancer['platform_balance'], 2); ?></div>
+                        <div class="mt-2 small text-muted">Completed projects</div>
+                        <div class="fw-bold text-jacarta"><?php echo (int)$freelancer['completed_projects']; ?></div>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -209,11 +291,11 @@ function balanceToRating($balance) {
 </section>
 
 <section class="mb-5" id="featured-gigs">
-    <h2 class="section-title mb-3">Hero Gigs</h2>
+    <h2 class="section-title mb-3"><?php echo $search_term !== '' ? 'Search Results' : 'Hero Gigs'; ?></h2>
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         <?php if (empty($featured_gigs)): ?>
             <div class="col-12 text-center py-4">
-                <p class="text-muted fs-5">No gigs available yet.</p>
+                <p class="text-muted fs-5"><?php echo $search_term !== '' ? 'No matching gigs found.' : 'No gigs available yet.'; ?></p>
             </div>
         <?php else: ?>
             <?php foreach ($featured_gigs as $gig): ?>
@@ -228,7 +310,11 @@ function balanceToRating($balance) {
                                 <span class="badge bg-light text-dark border p-2 small">
                                     @<?php echo htmlspecialchars($gig['username']); ?>
                                 </span>
-                                <span class="small text-muted"><?php echo balanceToRating((float)$gig['platform_balance']); ?>/5.0</span>
+                                <span class="small text-muted"><?php echo number_format((float)$gig['freelancer_rating'], 1); ?>/5.0</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="badge bg-bright-gray text-jacarta border"><?php echo htmlspecialchars($gig['category'] ?: 'Uncategorized'); ?></span>
+                                <span class="badge bg-light text-dark border"><?php echo htmlspecialchars($gig['subcategory'] ?: 'General'); ?></span>
                             </div>
                             <h5 class="card-title fw-bold text-dark mb-2"><?php echo htmlspecialchars($gig['title']); ?></h5>
                             <p class="card-text text-muted small flex-grow-1">
@@ -236,8 +322,8 @@ function balanceToRating($balance) {
                             </p>
 
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                                <span class="text-muted small fw-semibold">Starting at</span>
-                                <span class="fs-5 fw-bold" style="color: #7d5f2f;">$<?php echo number_format($gig['price'], 2); ?></span>
+                                <span class="text-muted small fw-semibold"><?php echo (int)$gig['completed_projects']; ?> completed projects</span>
+                                <span class="fs-5 fw-bold text-jacarta">$<?php echo number_format($gig['price'], 2); ?></span>
                             </div>
                         </div>
 
@@ -269,9 +355,11 @@ function balanceToRating($balance) {
         <?php foreach ($review_sources as $review): ?>
             <div class="col">
                 <div class="review-card">
-                    <p class="mb-2" style="color:#5e441e;">"Fast communication, clear delivery, and professional quality. I would hire this freelancer again for new work."</p>
-                    <div class="small text-muted">Buyer review for @<?php echo htmlspecialchars($review['username']); ?></div>
-                    <div class="small mt-1" style="color:#7d5f2f;">Completed jobs: <?php echo (int)$review['completed_jobs']; ?></div>
+                    <p class="mb-2 text-jacarta"><?php echo htmlspecialchars($review['review_text'] ?? 'Trusted collaborators make the whole marketplace feel reliable.'); ?></p>
+                    <div class="small text-muted">
+                        <?php echo htmlspecialchars($review['reviewer_name'] ?? 'A buyer'); ?> has reviewed @<?php echo htmlspecialchars($review['seller_name'] ?? 'a freelancer'); ?>'s work
+                    </div>
+                    <div class="small mt-1 text-dark-blue-gray">Rating: <?php echo isset($review['rating']) ? (int)$review['rating'] . '/5' : '5/5'; ?></div>
                 </div>
             </div>
         <?php endforeach; ?>

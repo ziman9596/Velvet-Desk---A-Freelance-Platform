@@ -28,9 +28,9 @@ $csrf_token = generateCSRFToken();
 
 <div class="row justify-content-center mt-2 mb-4">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm" style="border-radius: 16px; border: 1px solid #e7d4b1 !important;">
-            <div class="card-body p-4 p-lg-5" style="background: linear-gradient(180deg, #fffdf7, #fff5df); border-radius: 16px;">
-                <h1 class="h2 fw-bold mb-2" style="color:#65481f;">Contact Us</h1>
+        <div class="card border-0 shadow-sm" style="border-radius: 16px; border: 1px solid rgba(111, 94, 147, 0.18) !important;">
+            <div class="card-body p-4 p-lg-5" style="background: linear-gradient(180deg, rgba(228, 224, 242, 0.72), #ffffff); border-radius: 16px;">
+                <h1 class="h2 fw-bold mb-2 text-jacarta">Contact Us</h1>
                 <p class="text-muted mb-4">Send us your question and we will get back to you as quickly as possible.</p>
 
                 <?php echo $message; ?>

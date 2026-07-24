@@ -1,35 +1,87 @@
--- 1. Users Table
-CREATE TABLE IF NOT EXISTS orders (
-    order_id INTEGER PRIMARY KEY AUTOIONCREMENT,
+-- ============================================================
+-- VELVETDESK DATABASE SCHEMA (PURE SQL FORM)
+-- ============================================================
+
+-- Drop existing tables in reverse relational order to safely prevent constraint errors
+DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS order_messages;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS gigs;
+DROP TABLE IF EXISTS users;
+
+-- 1. Users Table (Core authentication & role categorization)
+CREATE TABLE users (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL, 
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Gigs Table (Service offerings catalog linked to freelance sellers)
+CREATE TABLE gigs (
+    gig_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    price REAL NOT NULL,
+    image_path TEXT DEFAULT 'assets/uploads/default-gig.svg',
+    portfolio_link TEXT DEFAULT NULL,
+    category TEXT DEFAULT '',
+    subcategory TEXT DEFAULT '',
+    service_type TEXT DEFAULT '',
+    package_type TEXT DEFAULT 'Standard',
+    delivery_time_days INTEGER DEFAULT 3,
+    revisions INTEGER DEFAULT 2,
+    gig_tags TEXT DEFAULT '',
+    highlights TEXT DEFAULT '',
+    requirements TEXT DEFAULT '',
+    faq TEXT DEFAULT '',
+    includes_source_files INTEGER DEFAULT 0,
+    video_link TEXT DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+-- 3. Orders Table (Contract and lifecycle tracking)
+CREATE TABLE orders (
+    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
     gig_id INTEGER,
     buyer_id INTEGER,
     seller_id INTEGER,
-    order_status TEXT DEFAULT 'In Progress', -- In Progress, Delivered, Completed
+    order_status TEXT DEFAULT 'Conversation Started',
     delivery_file_path TEXT DEFAULT NULL,
     submission_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    conversation_started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    order_placed_at DATETIME DEFAULT NULL,
+    confirmed_at DATETIME DEFAULT NULL,
     FOREIGN KEY(gig_id) REFERENCES gigs(gig_id),
     FOREIGN KEY(buyer_id) REFERENCES users(user_id),
     FOREIGN KEY(seller_id) REFERENCES users(user_id)
 );
 
--- 2. Gigs Table (Services)
-CREATE TABLE gigs (
-    gig_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT, -- Foreign Key referencing Users (Seller)
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+-- 4. Order Messages Table (Threaded text communication per order workspace)
+CREATE TABLE order_messages (
+    message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    message_text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY(sender_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- 3. Orders Table (With Payment Status)
-CREATE TABLE orders (
-    order_id INT AUTO_INCREMENT PRIMARY KEY,
-    gig_id INT,    -- Foreign Key referencing Gigs
-    buyer_id INT,  -- Foreign Key referencing Users (Buyer)
-    amount DECIMAL(10, 2) NOT NULL,
-    payment_status VARCHAR(20) DEFAULT 'Pending', -- 'Pending', 'Paid'
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (gig_id) REFERENCES gigs(gig_id),
-    FOREIGN KEY (buyer_id) REFERENCES users(user_id)
+-- 5. Reviews Table (One-to-one client verification loop post-delivery)
+CREATE TABLE reviews (
+    review_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL UNIQUE,
+    reviewer_id INTEGER NOT NULL,
+    seller_id INTEGER NOT NULL,
+    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    review_text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY(reviewer_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY(seller_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

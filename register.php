@@ -18,7 +18,9 @@ if (isset($_POST['register_btn'])) {
         if (empty($username) || empty($email) || empty($password) || empty($role)) {
             $message = "<div class='alert alert-danger'>All registration fields are required.</div>";
         } elseif (strlen($password) < 6) {
-            $message = "<div class='alert alert-danger'>Password must be at least 6 characters long.</div>";
+            $message = "<div class='alert alert-danger'>Password must be at least 8 characters long.</div>";
+        } elseif (!preg_match('/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/', $password)) {
+            $message = "<div class='alert alert-danger'>Password must include letters, numbers, and a special character.</div>";
         } elseif ($password !== $confirm_password) {
             $message = "<div class='alert alert-danger'>Passwords do not match.</div>";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -61,11 +63,19 @@ $csrf_token = generateCSRFToken();
     <title>VelvetDesk - Create Account</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #F2EEFF; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(167, 139, 197, 0.2); width: 100%; max-width: 450px; }
-        .btn-velvet { background-color: #A78BC5; color: white; border: none; font-weight: 600; transition: 0.3s; }
-        .btn-velvet:hover { background-color: #C8A2C8; color: white; transform: translateY(-1px); }
-        .form-control:focus, .form-select:focus { border-color: #A78BC5; box-shadow: 0 0 0 0.25rem rgba(167, 139, 197, 0.25); }
+        :root {
+            --jacarta: #3D2F5C;
+            --dark-blue-gray: #6F5E93;
+            --wisteria: #A895CD;
+            --bright-gray: #E4E0F2;
+            --black-coffee: #31212B;
+        }
+
+        body { background: linear-gradient(180deg, rgba(228, 224, 242, 0.92), #ffffff); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--black-coffee); }
+        .card { border-radius: 20px; border: 1px solid rgba(111, 94, 147, 0.16); box-shadow: 0 10px 30px rgba(61, 47, 92, 0.18); width: 100%; max-width: 450px; }
+        .btn-velvet { background-color: var(--dark-blue-gray); color: white; border: none; font-weight: 600; transition: 0.3s; }
+        .btn-velvet:hover { background-color: var(--wisteria); color: var(--jacarta); transform: translateY(-1px); }
+        .form-control:focus, .form-select:focus { border-color: var(--wisteria); box-shadow: 0 0 0 0.25rem rgba(168, 149, 205, 0.25); }
     </style>
 </head>
 <body>
@@ -74,7 +84,7 @@ $csrf_token = generateCSRFToken();
     <div class="text-center mb-4">
         <!-- Logo Image Reference Integration Block -->
         <img src="assets/image-removebg-preview.png" alt="VelvetDesk Logo" style="height: 55px; width: auto; object-fit: contain;" class="mb-2">
-        <h2 class="fw-bold" style="color: #A78BC5; margin-top: 5px;">VelvetDesk</h2>
+        <h2 class="fw-bold text-jacarta" style="margin-top: 5px;">VelvetDesk</h2>
         <p class="text-muted small">Join our premium decentralized workspace network</p>
     </div>
     
@@ -92,7 +102,7 @@ $csrf_token = generateCSRFToken();
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold text-secondary">Password</label>
-            <input type="password" name="password" class="form-control" placeholder="••••••••" required minlength="6">
+            <input type="password" name="password" class="form-control" placeholder="••••••••" required minlength="8" pattern="(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}" title="Use at least 8 characters with letters, numbers, and a special character.">
         </div>
         <div class="mb-3">
             <label class="form-label fw-semibold text-secondary">Confirm Password</label>
@@ -110,7 +120,7 @@ $csrf_token = generateCSRFToken();
     </form>
     
     <div class="text-center mt-4">
-        <p class="mb-0 small text-muted">Already have an account? <a href="login.php" style="color: #A78BC5;" class="fw-semibold text-decoration-none">Sign In</a></p>
+        <p class="mb-0 small text-muted">Already have an account? <a href="login.php" class="fw-semibold text-decoration-none text-wisteria">Sign In</a></p>
     </div>
 </div>
 

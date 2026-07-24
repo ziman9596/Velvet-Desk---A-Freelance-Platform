@@ -61,11 +61,19 @@ $csrf_token = generateCSRFToken();
     <title>VelvetDesk - Sign In</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: radial-gradient(circle at 15% 20%, #f6efe6, #f4ead8 35%, #efe2cb 70%); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Georgia', 'Times New Roman', serif; }
-        .card { border-radius: 18px; border: 1px solid #e3d7be; box-shadow: 0 14px 35px rgba(84, 63, 24, 0.12); width: 100%; max-width: 450px; }
-        .btn-velvet { background-color: #A78BC5; color: white; border: none; font-weight:600; }
-        .btn-velvet:hover { background-color: #C8A2C8; color:white; }
-        .form-control:focus, .form-select:focus { border-color: #A78BC5; box-shadow: 0 0 0 0.25rem rgba(167, 139, 197, 0.2); }
+        :root {
+            --jacarta: #3D2F5C;
+            --dark-blue-gray: #6F5E93;
+            --wisteria: #A895CD;
+            --bright-gray: #E4E0F2;
+            --black-coffee: #31212B;
+        }
+
+        body { background: radial-gradient(circle at 15% 20%, rgba(168, 149, 205, 0.35), rgba(228, 224, 242, 0.9) 35%, #ffffff 70%); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Georgia', 'Times New Roman', serif; color: var(--black-coffee); }
+        .card { border-radius: 18px; border: 1px solid rgba(111, 94, 147, 0.18); box-shadow: 0 14px 35px rgba(61, 47, 92, 0.12); width: 100%; max-width: 450px; }
+        .btn-velvet { background-color: var(--dark-blue-gray); color: white; border: none; font-weight:600; }
+        .btn-velvet:hover { background-color: var(--wisteria); color: var(--jacarta); }
+        .form-control:focus, .form-select:focus { border-color: var(--wisteria); box-shadow: 0 0 0 0.25rem rgba(168, 149, 205, 0.2); }
     </style>
 </head>
 <body>
@@ -73,7 +81,7 @@ $csrf_token = generateCSRFToken();
     <div class="text-center mb-4">
         <!-- Unified Image Logo Component -->
         <img src="assets/image-removebg-preview.png" alt="VelvetDesk Logo" style="height: 55px; width: auto; object-fit: contain;" class="mb-2">
-        <h2 class="fw-bold" style="color: #7d5f2f; margin-top: 5px;">VelvetDesk</h2>
+        <h2 class="fw-bold text-jacarta" style="margin-top: 5px;">VelvetDesk</h2>
         <p class="text-muted small">Choose your role and enter your account</p>
     </div>
     
@@ -100,7 +108,7 @@ $csrf_token = generateCSRFToken();
         <button type="submit" name="login_btn" class="btn btn-velvet w-100 py-2.5 rounded-3">Authenticate Account</button>
     </form>
     <div class="text-center mt-4">
-        <p class="mb-0 small text-muted">New to our network? <a href="register.php" style="color: #A78BC5;" class="fw-semibold text-decoration-none">Create Account</a></p>
+        <p class="mb-0 small text-muted">New to our network? <a href="register.php" class="fw-semibold text-decoration-none text-wisteria">Create Account</a></p>
     </div>
 </div>
 </body>

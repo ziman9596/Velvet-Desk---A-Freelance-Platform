@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title>Default Gig Placeholder</title>
+  <desc>Abstract placeholder graphic for gig cards.</desc>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3D2F5C"/>
+      <stop offset="55%" stop-color="#6F5E93"/>
+      <stop offset="100%" stop-color="#A895CD"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="#E4E0F2"/>
+  <circle cx="950" cy="160" r="240" fill="rgba(61,47,92,0.16)"/>
+  <circle cx="240" cy="640" r="280" fill="rgba(111,94,147,0.14)"/>
+  <rect x="110" y="140" width="980" height="520" rx="36" fill="url(#g)"/>
+  <rect x="170" y="210" width="300" height="28" rx="14" fill="#E4E0F2" opacity="0.95"/>
+  <rect x="170" y="260" width="520" height="22" rx="11" fill="#E4E0F2" opacity="0.85"/>
+  <rect x="170" y="300" width="420" height="22" rx="11" fill="#E4E0F2" opacity="0.75"/>
+  <rect x="170" y="400" width="860" height="14" rx="7" fill="#E4E0F2" opacity="0.65"/>
+  <rect x="170" y="440" width="720" height="14" rx="7" fill="#E4E0F2" opacity="0.55"/>
+  <text x="170" y="560" fill="#FFFFFF" font-family="Georgia, serif" font-size="58" font-weight="700">Default Gig</text>
+  <text x="170" y="620" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="28" opacity="0.88">Placeholder preview for unpublished or missing gig artwork</text>
+</svg>
